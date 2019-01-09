@@ -24,6 +24,17 @@ type NetworkService interface {
 	Broadcast(protocol string, payload []byte) error
 }
 
+type cpOutput struct {
+	InstanceId
+	set *Set
+}
+
+func (cpo cpOutput) Values() map[uint32]Value {
+	return cpo.set.values
+}
+
+var _ TerminationOutput = new(cpOutput)
+
 type State struct {
 	k           uint32          // the round counter (r%4 is the round number)
 	ki          int32           // indicates when S was first committed upon
@@ -41,6 +52,7 @@ type ConsensusProcess struct {
 	network         NetworkService
 	startTime       time.Time // TODO: needed?
 	inbox           chan *pb.HareMessage
+	terminationReport chan TerminationOutput
 	role            Role // the current role
 	validator       *MessageValidator
 	preRoundTracker *PreRoundTracker
@@ -52,9 +64,10 @@ type ConsensusProcess struct {
 	cfg             config.Config
 }
 
-func NewConsensusProcess(cfg config.Config, key crypto.PublicKey, instanceId InstanceId, s Set, oracle Rolacle, signing Signing, p2p NetworkService) *ConsensusProcess {
+func NewConsensusProcess(cfg config.Config, key crypto.PublicKey, instanceId InstanceId, s *Set, oracle Rolacle, signing Signing, p2p NetworkService) *ConsensusProcess {
 	proc := &ConsensusProcess{}
-	proc.State = State{0, -1, &s, nil}
+	// todo: clone the set so changes won't be effected here
+	proc.State = State{0, -1, s, nil}
 	proc.Closer = NewCloser()
 	proc.pubKey = key
 	proc.instanceId = instanceId
@@ -70,8 +83,13 @@ func NewConsensusProcess(cfg config.Config, key crypto.PublicKey, instanceId Ins
 	proc.notifyTracker = NewNotifyTracker(cfg.N)
 	proc.terminating = false
 	proc.cfg = cfg
+	proc.terminationReport = make(chan TerminationOutput)
 
 	return proc
+}
+
+func (proc *ConsensusProcess) reportTermination(set *Set) {
+	proc.terminationReport <- cpOutput{proc.instanceId, set}
 }
 
 func (proc *ConsensusProcess) Id() uint32 {
@@ -365,6 +383,7 @@ func (proc *ConsensusProcess) processNotifyMsg(msg *pb.HareMessage) {
 	// enough notifications, should terminate
 	log.Info("Consensus process terminated for %v with output set: ", proc.pubKey, proc.s)
 	proc.terminating = true // ensures immediate termination
+	go proc.reportTermination(s)
 	proc.Close()
 }
 
@@ -396,6 +415,10 @@ func (proc *ConsensusProcess) endOfRound3() {
 	builder := proc.initDefaultBuilder(proc.s).SetType(Notify).SetCertificate(proc.certificate).Sign(proc.signing)
 	roundMsg := builder.Build() // build notify with certificate
 	proc.sendMessage(roundMsg)
+}
+
+func (proc *ConsensusProcess) TerminationOutput() chan TerminationOutput {
+	return proc.terminationReport
 }
 
 func (proc *ConsensusProcess) updateRole() {

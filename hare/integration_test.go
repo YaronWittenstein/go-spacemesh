@@ -127,7 +127,7 @@ func Test_ThreeNodes_HareIntegrationSuite(t *testing.T) {
 	oracle := NewMockStaticOracle(cfg.N)
 	his.BeforeHook = func(idx int, s p2p.NodeTestInstance) {
 		broker := NewBroker(s)
-		proc := NewConsensusProcess(cfg, generatePubKey(t), *instanceId1, *his.initialSets[idx], oracle, NewMockSigning(), s)
+		proc := NewConsensusProcess(cfg, generatePubKey(t), *instanceId1, his.initialSets[idx], oracle, NewMockSigning(), s)
 		broker.Register(proc)
 		broker.Start()
 		his.procs = append(his.procs, proc)
@@ -189,7 +189,7 @@ func Test_100Nodes_HareIntegrationSuite(t *testing.T) {
 	oracle := NewMockStaticOracle(cfg.N)
 	his.BeforeHook = func(idx int, s p2p.NodeTestInstance) {
 		broker := NewBroker(s)
-		proc := NewConsensusProcess(cfg, generatePubKey(t), *instanceId1, *his.initialSets[idx], oracle, NewMockSigning(), s)
+		proc := NewConsensusProcess(cfg, generatePubKey(t), *instanceId1, his.initialSets[idx], oracle, NewMockSigning(), s)
 		broker.Register(proc)
 		broker.Start()
 		his.procs = append(his.procs, proc)
