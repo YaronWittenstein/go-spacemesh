@@ -25,8 +25,12 @@ type NetworkService interface {
 }
 
 type cpOutput struct {
-	InstanceId
+	id InstanceId
 	set *Set
+}
+
+func (cpo cpOutput) Id() []byte {
+	return cpo.id.Bytes()
 }
 
 func (cpo cpOutput) Values() map[uint32]Value {

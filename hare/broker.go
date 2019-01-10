@@ -95,6 +95,7 @@ func (broker *Broker) dispatcher() {
 			c, exist := broker.outbox[instanceId.Id()]
 			broker.mutex.RUnlock()
 			if exist {
+				// todo: err if chan is full (len)
 				c <- hareMsg
 			}
 
