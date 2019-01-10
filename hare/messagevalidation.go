@@ -42,8 +42,8 @@ func (validator *MessageValidator) ValidateMessage(m *pb.HareMessage, k uint32) 
 		return false
 	}
 
-	ver, err := pk.Verify(data, m.InnerSig)
-	if err != nil || ver {
+	ok, err := pk.Verify(data, m.InnerSig)
+	if err != nil || !ok {
 		log.Warning("Validate message failed: invalid message signature detected")
 		return false
 	}

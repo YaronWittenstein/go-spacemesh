@@ -1,6 +1,7 @@
 package hare
 
 import (
+	"github.com/spacemeshos/go-spacemesh/crypto"
 	"github.com/spacemeshos/go-spacemesh/hare/config"
 	"github.com/spacemeshos/go-spacemesh/p2p"
 	"github.com/stretchr/testify/suite"
@@ -150,6 +151,18 @@ type hareIntegration100Nodes struct {
 	*HareIntegrationSuite
 }
 
+type signordie struct {
+	p crypto.PrivateKey
+}
+
+func (sod signordie) Sign(m []byte) ([]byte) {
+	s, err := sod.p.Sign(m)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func Test_100Nodes_HareIntegrationSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -189,7 +202,7 @@ func Test_100Nodes_HareIntegrationSuite(t *testing.T) {
 	oracle := NewMockStaticOracle(cfg.N)
 	his.BeforeHook = func(idx int, s p2p.NodeTestInstance) {
 		broker := NewBroker(s)
-		proc := NewConsensusProcess(cfg, generatePubKey(t), *instanceId1, his.initialSets[idx], oracle, NewMockSigning(), s)
+		proc := NewConsensusProcess(cfg, s.LocalNode().PublicKey(), *instanceId1, his.initialSets[idx], oracle, &signordie{s.LocalNode().PrivateKey()}, s)
 		broker.Register(proc)
 		broker.Start()
 		his.procs = append(his.procs, proc)
